@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "node node_modules/@nestjs/cli/bin/nest.js build",
+    "build": "npm run prisma:generate && node node_modules/@nestjs/cli/bin/nest.js build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node node_modules/@nestjs/cli/bin/nest.js start",
     "start:dev": "node node_modules/@nestjs/cli/bin/nest.js start --watch",
@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json"
+    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
+    "prisma:generate": "node node_modules/prisma/build/index.js generate"
   },
   "dependencies": {
     "@google/genai": "^2.13.0",
