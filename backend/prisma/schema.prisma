@@ -1,0 +1,707 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "cjs"
+  generatedFileExtension = "ts"
+  importFileExtension    = ""
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["bigu_app"]
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+
+  @@schema("bigu_app")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+
+  @@schema("bigu_app")
+}
+
+enum UserProvisioningSource {
+  BOOTSTRAP
+  ADMIN
+
+  @@schema("bigu_app")
+}
+
+enum AccountAuditAction {
+  ADMIN_BOOTSTRAPPED
+  USER_CREATED
+  USER_PROFILE_CHANGED
+  ROLE_CHANGED
+  DESIGNATION_CHANGED
+  PASSWORD_RESET
+  INITIAL_PASSWORD_CHANGED
+  SESSIONS_REVOKED
+  USER_SUSPENDED
+  USER_DEACTIVATED
+  USER_REACTIVATED
+  RESPONSIBILITIES_REASSIGNED
+  LOGIN_SUCCEEDED
+  LOGIN_FAILED
+  ADMIN_ACCESS_DENIED
+  LAST_ADMIN_OPERATION_BLOCKED
+
+  @@schema("bigu_app")
+}
+
+enum ThemePreference {
+  SYSTEM
+  LIGHT
+  DARK
+
+  @@schema("bigu_app")
+}
+
+model User {
+  id                   String                 @id @default(uuid())
+  name                 String
+  username             String                 @unique
+  email                String                 @unique
+  passwordHash         String
+  role                 Role                   @default(STAFF)
+  designation          String?                @db.VarChar(160)
+  status               UserStatus             @default(ACTIVE)
+  mustChangePassword   Boolean                @default(false) @map("must_change_password")
+  tokenVersion         Int                    @default(0) @map("token_version")
+  refreshTokenHash     String?
+  lastLoginAt          DateTime?              @map("last_login_at")
+  passwordChangedAt    DateTime?              @map("password_changed_at")
+  deactivatedAt        DateTime?              @map("deactivated_at")
+  deactivatedById      String?                @map("deactivated_by_id")
+  deactivatedBy        User?                  @relation("UserDeactivator", fields: [deactivatedById], references: [id], onDelete: SetNull)
+  usersDeactivated     User[]                 @relation("UserDeactivator")
+  deactivationReason   String?                @map("deactivation_reason") @db.Text
+  suspensionReason     String?                @map("suspension_reason") @db.Text
+  suspensionReviewDate DateTime?              @map("suspension_review_date") @db.Date
+  createdById          String?                @map("created_by_id")
+  createdBy            User?                  @relation("UserCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  usersCreated         User[]                 @relation("UserCreator")
+  provisioningSource   UserProvisioningSource @default(ADMIN) @map("provisioning_source")
+  avatarUrl            String?                @map("avatar_url") @db.VarChar(2048)
+  avatarPublicId       String?                @map("avatar_public_id") @db.VarChar(512)
+  avatarResourceType   String?                @map("avatar_resource_type") @db.VarChar(20)
+  themePreference      ThemePreference        @default(SYSTEM) @map("theme_preference")
+  accentColor          String?                @map("accent_color") @db.VarChar(7)
+  themeColor           String?                @map("theme_color") @db.VarChar(7)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  clientsCreated              Client[]                   @relation("ClientCreator")
+  conversationsCreated        Conversation[]             @relation("ConversationCreator")
+  messagesCreated             Message[]                  @relation("MessageCreator")
+  changeRequestsReviewed      ContextChangeRequest[]     @relation("ChangeReviewer")
+  instructionsCreated         ClientInstruction[]        @relation("InstructionCreator")
+  filesUploaded               ClientFile[]               @relation("FileUploader")
+  projectsAssigned            Project[]                  @relation("ProjectAssignee")
+  spreadsheetWorkbooksCreated SpreadsheetWorkbook[]      @relation("SpreadsheetWorkbookCreator")
+  researchBriefsCreated       ProjectResearchBrief[]     @relation("ResearchBriefCreator")
+  researchBriefsUpdated       ProjectResearchBrief[]     @relation("ResearchBriefUpdater")
+  competitorsCreated          ProjectCompetitor[]        @relation("CompetitorCreator")
+  competitorsUpdated          ProjectCompetitor[]        @relation("CompetitorUpdater")
+  referencesCreated           ProjectReference[]         @relation("ReferenceCreator")
+  observationsCreated         ResearchObservation[]      @relation("ObservationCreator")
+  findingsReviewed            ResearchFinding[]          @relation("FindingReviewer")
+  strategiesCreated           ProjectMarketingStrategy[] @relation("StrategyCreator")
+  strategiesUpdated           ProjectMarketingStrategy[] @relation("StrategyUpdater")
+  strategiesApproved          ProjectMarketingStrategy[] @relation("StrategyApprover")
+  accountAuditEventsActed     AccountAuditEvent[]        @relation("AccountAuditActor")
+  accountAuditEventsTargeted  AccountAuditEvent[]        @relation("AccountAuditTarget")
+
+  @@index([username])
+  @@index([role])
+  @@index([status])
+  @@index([designation])
+  @@index([createdById])
+  @@index([deactivatedById])
+  @@schema("bigu_app")
+}
+
+model AccountAuditEvent {
+  id                 String             @id @default(uuid())
+  actorUserId        String?            @map("actor_user_id")
+  actorUser          User?              @relation("AccountAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  targetUserId       String?            @map("target_user_id")
+  targetUser         User?              @relation("AccountAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  action             AccountAuditAction
+  oldValue           Json?              @map("old_value")
+  newValue           Json?              @map("new_value")
+  reason             String?            @db.Text
+  ipAddress          String?            @map("ip_address") @db.VarChar(64)
+  userAgentSummary   String?            @map("user_agent_summary") @db.VarChar(512)
+  actorNameSnapshot  String?            @map("actor_name_snapshot") @db.VarChar(120)
+  actorEmailSnapshot String?            @map("actor_email_snapshot") @db.VarChar(255)
+  actorRoleSnapshot  Role?              @map("actor_role_snapshot")
+  createdAt          DateTime           @default(now()) @map("created_at")
+
+  @@index([targetUserId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@map("account_audit_events")
+  @@schema("bigu_app")
+}
+
+enum ClientStatus {
+  ACTIVE
+  ARCHIVED
+
+  @@schema("bigu_app")
+}
+
+model Client {
+  id                 String       @id @default(uuid())
+  name               String       @db.VarChar(160)
+  industry           String?      @db.VarChar(120)
+  description        String?      @db.Text
+  targetAudience     String?      @map("target_audience") @db.Text
+  brandVoice         String?      @map("brand_voice") @db.Text
+  websiteUrl         String?      @map("website_url") @db.VarChar(2048)
+  instagramUrl       String?      @map("instagram_url") @db.VarChar(2048)
+  facebookUrl        String?      @map("facebook_url") @db.VarChar(2048)
+  businessObjectives String?      @map("business_objectives") @db.Text
+  status             ClientStatus @default(ACTIVE)
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation("ClientCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  conversations         Conversation[]
+  contextChangeRequests ContextChangeRequest[]
+  clientInstructions    ClientInstruction[]
+  clientFiles           ClientFile[]
+  projects              Project[]
+  spreadsheetWorkbooks  SpreadsheetWorkbook[]
+  spreadsheetSyncJobs   SpreadsheetSyncJob[]
+
+  @@index([name])
+  @@index([status, updatedAt])
+  @@index([createdById])
+  @@map("clients")
+  @@schema("bigu_app")
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+
+  @@schema("bigu_app")
+}
+
+enum ProjectReferenceType {
+  COMPETITOR_POST
+  CAMPAIGN
+  ARTICLE
+  WEBSITE
+  VIDEO
+  SCREENSHOT
+  DOCUMENT
+  INSPIRATION
+  INTERNAL_NOTE
+  OTHER
+
+  @@schema("bigu_app")
+}
+
+enum ResearchObservationCategory {
+  BRAND
+  INDUSTRY
+  COMPETITOR
+  AUDIENCE
+  PLATFORM
+  CONTENT
+  HASHTAG
+  KEYWORD
+  TREND
+  OPPORTUNITY
+  RISK
+  OTHER
+
+  @@schema("bigu_app")
+}
+
+enum ResearchFindingCategory {
+  AUDIENCE
+  COMPETITOR
+  PLATFORM
+  CONTENT
+  HASHTAG
+  KEYWORD
+  TONE
+  VISUAL
+  CAMPAIGN
+  RISK
+  ASSUMPTION
+  OPPORTUNITY
+  OTHER
+
+  @@schema("bigu_app")
+}
+
+enum ResearchFindingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@schema("bigu_app")
+}
+
+enum MarketingStrategyStatus {
+  DRAFT
+  APPROVED
+
+  @@schema("bigu_app")
+}
+
+model Project {
+  id                   String                    @id @default(uuid())
+  clientId             String                    @map("client_id")
+  client               Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title                String                    @db.VarChar(200)
+  projectType          String?                   @map("project_type") @db.VarChar(120)
+  growthObjective      String?                   @map("growth_objective") @db.Text
+  platforms            String[]                  @default([])
+  startDate            DateTime?                 @map("start_date") @db.Date
+  endDate              DateTime?                 @map("end_date") @db.Date
+  month                Int?
+  year                 Int?
+  assignedUserId       String?                   @map("assigned_user_id")
+  assignedUser         User?                     @relation("ProjectAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  contentTarget        Int?                      @map("content_target")
+  status               ProjectStatus             @default(DRAFT)
+  sopVersionId         String?                   @map("sop_version_id")
+  sopVersion           SopVersion?               @relation(fields: [sopVersionId], references: [id], onDelete: Restrict)
+  sopState             ProjectSopState?
+  conversation         Conversation?
+  changeRequests       ContextChangeRequest[]
+  instructions         ClientInstruction[]
+  files                ClientFile[]
+  spreadsheetWorksheet ProjectWorksheet?
+  spreadsheetSyncJobs  SpreadsheetSyncJob[]
+  researchBrief        ProjectResearchBrief?
+  researchCompetitors  ProjectCompetitor[]
+  researchReferences   ProjectReference[]
+  researchObservations ResearchObservation[]
+  researchFindings     ResearchFinding[]
+  marketingStrategy    ProjectMarketingStrategy?
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  updatedAt            DateTime                  @updatedAt @map("updated_at")
+
+  @@index([clientId, status, updatedAt])
+  @@index([assignedUserId])
+  @@index([sopVersionId])
+  @@map("projects")
+  @@schema("bigu_app")
+}
+
+model ProjectResearchBrief {
+  id                String   @id @default(uuid())
+  projectId         String   @unique @map("project_id")
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  businessGoal      String?  @map("business_goal") @db.Text
+  researchGoal      String?  @map("research_goal") @db.Text
+  targetMarket      String?  @map("target_market") @db.Text
+  geographicFocus   String?  @map("geographic_focus") @db.Text
+  audienceNotes     String?  @map("audience_notes") @db.Text
+  knownCompetitors  String[] @default([]) @map("known_competitors")
+  platforms         String[] @default([])
+  constraints       String?  @db.Text
+  additionalContext String?  @map("additional_context") @db.Text
+  createdById       String   @map("created_by_id")
+  createdBy         User     @relation("ResearchBriefCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedById       String   @map("updated_by_id")
+  updatedBy         User     @relation("ResearchBriefUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("project_research_briefs")
+  @@schema("bigu_app")
+}
+
+model ProjectCompetitor {
+  id                     String                @id @default(uuid())
+  projectId              String                @map("project_id")
+  project                Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name                   String                @db.VarChar(200)
+  websiteUrl             String?               @map("website_url") @db.VarChar(2048)
+  instagramUrl           String?               @map("instagram_url") @db.VarChar(2048)
+  facebookUrl            String?               @map("facebook_url") @db.VarChar(2048)
+  youtubeUrl             String?               @map("youtube_url") @db.VarChar(2048)
+  linkedinUrl            String?               @map("linkedin_url") @db.VarChar(2048)
+  otherUrls              String[]              @default([]) @map("other_urls")
+  platforms              String[]              @default([])
+  postingFrequency       String?               @map("posting_frequency") @db.Text
+  contentPillars         String[]              @default([]) @map("content_pillars")
+  toneOfVoice            String?               @map("tone_of_voice") @db.Text
+  visualStyle            String?               @map("visual_style") @db.Text
+  commonCallsToAction    String[]              @default([]) @map("common_calls_to_action")
+  engagementObservations String?               @map("engagement_observations") @db.Text
+  strengths              String[]              @default([])
+  weaknesses             String[]              @default([])
+  opportunities          String[]              @default([])
+  notes                  String?               @db.Text
+  createdById            String                @map("created_by_id")
+  createdBy              User                  @relation("CompetitorCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedById            String                @map("updated_by_id")
+  updatedBy              User                  @relation("CompetitorUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+  observations           ResearchObservation[]
+  createdAt              DateTime              @default(now()) @map("created_at")
+  updatedAt              DateTime              @updatedAt @map("updated_at")
+
+  @@index([projectId, name])
+  @@map("project_competitors")
+  @@schema("bigu_app")
+}
+
+model ProjectReference {
+  id            String                @id @default(uuid())
+  projectId     String                @map("project_id")
+  project       Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title         String                @db.VarChar(240)
+  url           String?               @db.VarChar(2048)
+  type          ProjectReferenceType  @default(OTHER)
+  platform      String?               @db.VarChar(120)
+  description   String?               @db.Text
+  tags          String[]              @default([])
+  projectFileId String?               @map("project_file_id")
+  projectFile   ClientFile?           @relation(fields: [projectFileId], references: [id], onDelete: SetNull)
+  createdById   String                @map("created_by_id")
+  createdBy     User                  @relation("ReferenceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  observations  ResearchObservation[]
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+
+  @@index([projectId, type])
+  @@map("project_references")
+  @@schema("bigu_app")
+}
+
+model ResearchObservation {
+  id                 String                      @id @default(uuid())
+  projectId          String                      @map("project_id")
+  project            Project                     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category           ResearchObservationCategory @default(OTHER)
+  title              String                      @db.VarChar(200)
+  content            String                      @db.Text
+  sourceReferenceId  String?                     @map("source_reference_id")
+  sourceReference    ProjectReference?           @relation(fields: [sourceReferenceId], references: [id], onDelete: SetNull)
+  sourceCompetitorId String?                     @map("source_competitor_id")
+  sourceCompetitor   ProjectCompetitor?          @relation(fields: [sourceCompetitorId], references: [id], onDelete: SetNull)
+  createdById        String                      @map("created_by_id")
+  createdBy          User                        @relation("ObservationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime                    @default(now()) @map("created_at")
+  updatedAt          DateTime                    @updatedAt @map("updated_at")
+
+  @@index([projectId, category])
+  @@map("research_observations")
+  @@schema("bigu_app")
+}
+
+model ResearchFinding {
+  id                String                  @id @default(uuid())
+  projectId         String                  @map("project_id")
+  project           Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category          ResearchFindingCategory
+  title             String                  @db.VarChar(200)
+  proposedValue     Json                    @map("proposed_value")
+  explanation       String?                 @db.Text
+  evidence          Json?
+  confidence        Float?
+  status            ResearchFindingStatus   @default(PENDING)
+  sourceType        String                  @default("AI") @map("source_type") @db.VarChar(40)
+  sourceAiMessageId String?                 @map("source_ai_message_id")
+  sourceAiMessage   Message?                @relation(fields: [sourceAiMessageId], references: [id], onDelete: SetNull)
+  provider          String?                 @db.VarChar(80)
+  model             String?                 @db.VarChar(120)
+  promptVersion     String?                 @map("prompt_version") @db.VarChar(40)
+  reviewedById      String?                 @map("reviewed_by_id")
+  reviewedBy        User?                   @relation("FindingReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt        DateTime?               @map("reviewed_at")
+  rejectionReason   String?                 @map("rejection_reason") @db.Text
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+
+  @@index([projectId, status])
+  @@index([projectId, category])
+  @@map("research_findings")
+  @@schema("bigu_app")
+}
+
+model ProjectMarketingStrategy {
+  id                              String                  @id @default(uuid())
+  projectId                       String                  @unique @map("project_id")
+  project                         Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  businessObjective               String?                 @map("business_objective") @db.Text
+  audienceSegments                Json?                   @map("audience_segments")
+  platformPriorities              Json?                   @map("platform_priorities")
+  contentPillars                  Json?                   @map("content_pillars")
+  recommendedFormats              Json?                   @map("recommended_formats")
+  postingFrequency                Json?                   @map("posting_frequency")
+  brandVoiceGuidance              String?                 @map("brand_voice_guidance") @db.Text
+  engagementStrategy              String?                 @map("engagement_strategy") @db.Text
+  campaignIdeas                   Json?                   @map("campaign_ideas")
+  hashtagGroups                   Json?                   @map("hashtag_groups")
+  keywordGroups                   Json?                   @map("keyword_groups")
+  callsToAction                   Json?                   @map("calls_to_action")
+  kpis                            Json?
+  risks                           Json?
+  assumptions                     Json?
+  status                          MarketingStrategyStatus @default(DRAFT)
+  generatedFromApprovedResearchAt DateTime?               @map("generated_from_approved_research_at")
+  createdById                     String                  @map("created_by_id")
+  createdBy                       User                    @relation("StrategyCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedById                     String                  @map("updated_by_id")
+  updatedBy                       User                    @relation("StrategyUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+  approvedById                    String?                 @map("approved_by_id")
+  approvedBy                      User?                   @relation("StrategyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt                      DateTime?               @map("approved_at")
+  createdAt                       DateTime                @default(now()) @map("created_at")
+  updatedAt                       DateTime                @updatedAt @map("updated_at")
+
+  @@map("project_marketing_strategies")
+  @@schema("bigu_app")
+}
+
+enum SopVersionStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+  ARCHIVED
+
+  @@schema("bigu_app")
+}
+
+model SopVersion {
+  id                String           @id @default(uuid())
+  sopCode           String           @map("sop_code") @db.VarChar(20)
+  sopName           String           @map("sop_name") @db.VarChar(200)
+  version           Int
+  projectType       String           @map("project_type") @db.VarChar(120)
+  purpose           String           @db.Text
+  ownerRole         String           @map("owner_role") @db.VarChar(160)
+  appliesTo         String           @map("applies_to") @db.Text
+  stages            Json
+  qualityChecklist  Json             @map("quality_checklist")
+  requiredDocuments Json             @map("required_documents")
+  status            SopVersionStatus @default(DRAFT)
+  publishedAt       DateTime?        @map("published_at")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  projects          Project[]
+
+  @@unique([sopCode, version])
+  @@index([projectType, status, version])
+  @@map("sop_versions")
+  @@schema("bigu_app")
+}
+
+model ProjectSopState {
+  id                             String   @id @default(uuid())
+  projectId                      String   @unique @map("project_id")
+  project                        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  currentStageId                 String?  @map("current_stage_id") @db.VarChar(160)
+  stages                         Json
+  completedChecklistItemIds      String[] @default([]) @map("completed_checklist_item_ids")
+  uploadedDocumentRequirementIds String[] @default([]) @map("uploaded_document_requirement_ids")
+  approvedInternalStageIds       String[] @default([]) @map("approved_internal_stage_ids")
+  approvedClientStageIds         String[] @default([]) @map("approved_client_stage_ids")
+  activeOverrides                Json     @map("active_overrides")
+  createdAt                      DateTime @default(now()) @map("created_at")
+  updatedAt                      DateTime @updatedAt @map("updated_at")
+
+  @@map("project_sop_states")
+  @@schema("bigu_app")
+}
+
+enum MessageSenderType {
+  USER
+  ASSISTANT
+  SYSTEM
+
+  @@schema("bigu_app")
+}
+
+enum MessageStatus {
+  PENDING
+  COMPLETED
+  STREAMING
+  FAILED
+
+  CANCELLED
+
+  @@schema("bigu_app")
+}
+
+enum ContextChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@schema("bigu_app")
+}
+
+enum ClientInstructionStatus {
+  ACTIVE
+  ARCHIVED
+
+  @@schema("bigu_app")
+}
+
+enum ClientFileStatus {
+  UPLOADING
+  PROCESSING
+  READY_FOR_REVIEW
+  APPROVED
+  FAILED
+  REJECTED
+
+  @@schema("bigu_app")
+}
+
+model Conversation {
+  id             String                 @id @default(uuid())
+  clientId       String                 @map("client_id")
+  client         Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId      String?                @unique @map("project_id")
+  project        Project?               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title          String                 @default("Client workspace") @db.VarChar(200)
+  isPrimary      Boolean                @default(true) @map("is_primary")
+  createdById    String                 @map("created_by_id")
+  createdBy      User                   @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  messages       Message[]
+  changeRequests ContextChangeRequest[]
+  files          ClientFile[]
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+
+  @@index([clientId, updatedAt])
+  @@map("conversations")
+  @@schema("bigu_app")
+}
+
+model Message {
+  id               String                 @id @default(uuid())
+  conversationId   String                 @map("conversation_id")
+  conversation     Conversation           @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderType       MessageSenderType      @map("sender_type")
+  content          String                 @db.Text
+  status           MessageStatus          @default(COMPLETED)
+  createdById      String?                @map("created_by_id")
+  createdBy        User?                  @relation("MessageCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  provider         String?                @db.VarChar(80)
+  model            String?                @db.VarChar(120)
+  promptVersion    String?                @map("prompt_version") @db.VarChar(40)
+  usedFallback     Boolean?               @map("used_fallback")
+  errorCode        String?                @map("error_code") @db.VarChar(80)
+  changeRequests   ContextChangeRequest[]
+  instructions     ClientInstruction[]
+  researchFindings ResearchFinding[]
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+  @@schema("bigu_app")
+}
+
+model ContextChangeRequest {
+  id                 String              @id @default(uuid())
+  clientId           String              @map("client_id")
+  client             Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId          String?             @map("project_id")
+  project            Project?            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  conversationId     String              @map("conversation_id")
+  conversation       Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sourceMessageId    String              @map("source_message_id")
+  sourceMessage      Message             @relation(fields: [sourceMessageId], references: [id], onDelete: Cascade)
+  fieldName          String              @map("field_name") @db.VarChar(80)
+  oldValue           String?             @map("old_value") @db.Text
+  proposedValue      String              @map("proposed_value") @db.Text
+  explanation        String?             @db.Text
+  confidence         Float?
+  status             ContextChangeStatus @default(PENDING)
+  proposedByProvider String?             @map("proposed_by_provider") @db.VarChar(80)
+  proposedByModel    String?             @map("proposed_by_model") @db.VarChar(120)
+  promptVersion      String?             @map("prompt_version") @db.VarChar(40)
+  reviewedById       String?             @map("reviewed_by_id")
+  reviewedBy         User?               @relation("ChangeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt         DateTime?           @map("reviewed_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  @@index([clientId, status])
+  @@index([projectId, status])
+  @@map("context_change_requests")
+  @@schema("bigu_app")
+}
+
+model ClientInstruction {
+  id              String                  @id @default(uuid())
+  clientId        String                  @map("client_id")
+  client          Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId       String?                 @map("project_id")
+  project         Project?                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title           String                  @db.VarChar(160)
+  content         String                  @db.Text
+  sourceMessageId String?                 @map("source_message_id")
+  sourceMessage   Message?                @relation(fields: [sourceMessageId], references: [id], onDelete: SetNull)
+  createdById     String                  @map("created_by_id")
+  createdBy       User                    @relation("InstructionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  status          ClientInstructionStatus @default(ACTIVE)
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
+  @@index([clientId, status])
+  @@index([projectId, status])
+  @@map("client_instructions")
+  @@schema("bigu_app")
+}
+
+model ClientFile {
+  id                  String             @id @default(uuid())
+  clientId            String             @map("client_id")
+  client              Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId           String?            @map("project_id")
+  project             Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  conversationId      String             @map("conversation_id")
+  conversation        Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  originalName        String             @map("original_name") @db.VarChar(255)
+  storedName          String             @map("stored_name") @db.VarChar(255)
+  mimeType            String             @map("mime_type") @db.VarChar(120)
+  sizeBytes           Int                @map("size_bytes")
+  storageUrl          String             @map("storage_url") @db.VarChar(2048)
+  processingStatus    ClientFileStatus   @default(UPLOADING) @map("processing_status")
+  storageProvider     String?            @map("storage_provider") @db.VarChar(40)
+  storagePublicId     String?            @map("storage_public_id") @db.VarChar(512)
+  storageResourceType String?            @map("storage_resource_type") @db.VarChar(20)
+  extractedText       String?            @map("extracted_text") @db.Text
+  uploadedById        String             @map("uploaded_by_id")
+  uploadedBy          User               @relation("FileUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  projectReferences   ProjectReference[]
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  @@index([clientId, processingStatus])
+  @@index([projectId, processingStatus])
+  @@map("client_files")
+  @@schema("bigu_app")
+}

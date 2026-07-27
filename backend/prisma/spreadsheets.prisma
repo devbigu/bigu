@@ -1,0 +1,128 @@
+enum SpreadsheetProviderType {
+  GOOGLE_SHEETS
+
+  @@schema("bigu_app")
+}
+
+enum SpreadsheetResourceStatus {
+  CREATING
+  ACTIVE
+  FAILED
+  ARCHIVED
+
+  @@schema("bigu_app")
+}
+
+enum SpreadsheetSyncStatus {
+  PENDING
+  PROCESSING
+  SYNCED
+  FAILED
+  CANCELLED
+
+  @@schema("bigu_app")
+}
+
+enum SpreadsheetSyncOperation {
+  PROVISION
+  SYNC_CLIENT
+  SYNC_PROJECT
+
+  @@schema("bigu_app")
+}
+
+model SpreadsheetWorkbook {
+  id                  String                    @id @default(uuid())
+  clientId            String                    @map("client_id")
+  client              Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  provider            SpreadsheetProviderType
+  externalWorkbookId  String?                   @map("external_workbook_id") @db.VarChar(255)
+  workbookName        String                    @map("workbook_name") @db.VarChar(200)
+  externalUrl         String?                   @map("external_url") @db.VarChar(2048)
+  overviewWorksheetId String?                   @map("overview_worksheet_id") @db.VarChar(255)
+  syncLogWorksheetId  String?                   @map("sync_log_worksheet_id") @db.VarChar(255)
+  status              SpreadsheetResourceStatus @default(CREATING)
+  activeClientKey     String?                   @unique @map("active_client_key")
+  lastSyncedAt        DateTime?                 @map("last_synced_at")
+  createdById         String                    @map("created_by_id")
+  createdBy           User                      @relation("SpreadsheetWorkbookCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  worksheets          ProjectWorksheet[]
+  syncJobs            SpreadsheetSyncJob[]
+
+  @@index([clientId, status])
+  @@index([externalWorkbookId])
+  @@map("spreadsheet_workbooks")
+  @@schema("bigu_app")
+}
+
+model ProjectWorksheet {
+  id                  String                    @id @default(uuid())
+  workbookId          String                    @map("workbook_id")
+  workbook            SpreadsheetWorkbook       @relation(fields: [workbookId], references: [id], onDelete: Cascade)
+  projectId           String                    @unique @map("project_id")
+  project             Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  externalWorksheetId String?                   @map("external_worksheet_id") @db.VarChar(255)
+  worksheetName       String                    @map("worksheet_name") @db.VarChar(100)
+  worksheetIndex      Int                       @map("worksheet_index")
+  status              SpreadsheetResourceStatus @default(CREATING)
+  lastSyncedAt        DateTime?                 @map("last_synced_at")
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  syncJobs            SpreadsheetSyncJob[]
+  rowMappings         SpreadsheetRowMapping[]
+
+  @@unique([workbookId, worksheetName])
+  @@index([workbookId, status])
+  @@map("project_worksheets")
+  @@schema("bigu_app")
+}
+
+model SpreadsheetSyncJob {
+  id             String                   @id @default(uuid())
+  clientId       String                   @map("client_id")
+  client         Client                   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId      String?                  @map("project_id")
+  project        Project?                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workbookId     String                   @map("workbook_id")
+  workbook       SpreadsheetWorkbook      @relation(fields: [workbookId], references: [id], onDelete: Cascade)
+  worksheetId    String?                  @map("worksheet_id")
+  worksheet      ProjectWorksheet?        @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
+  sourceType     String                   @map("source_type") @db.VarChar(80)
+  sourceId       String                   @map("source_id") @db.VarChar(255)
+  operation      SpreadsheetSyncOperation
+  payload        Json?
+  idempotencyKey String                   @unique @map("idempotency_key") @db.VarChar(255)
+  status         SpreadsheetSyncStatus    @default(PENDING)
+  attempts       Int                      @default(0)
+  errorCode      String?                  @map("error_code") @db.VarChar(120)
+  errorMessage   String?                  @map("error_message") @db.Text
+  requestedAt    DateTime                 @default(now()) @map("requested_at")
+  startedAt      DateTime?                @map("started_at")
+  completedAt    DateTime?                @map("completed_at")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+
+  @@index([status, requestedAt])
+  @@index([clientId, requestedAt])
+  @@index([projectId, requestedAt])
+  @@map("spreadsheet_sync_jobs")
+  @@schema("bigu_app")
+}
+
+model SpreadsheetRowMapping {
+  id            String           @id @default(uuid())
+  worksheetId   String           @map("worksheet_id")
+  worksheet     ProjectWorksheet @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
+  entityType    String           @map("entity_type") @db.VarChar(80)
+  entityId      String           @map("entity_id") @db.VarChar(255)
+  section       String           @db.VarChar(80)
+  rowIdentifier String           @map("row_identifier") @db.VarChar(80)
+  lastSyncedAt  DateTime         @default(now()) @map("last_synced_at")
+
+  @@unique([worksheetId, entityType, entityId])
+  @@index([worksheetId, section])
+  @@map("spreadsheet_row_mappings")
+  @@schema("bigu_app")
+}
