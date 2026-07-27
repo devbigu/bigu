@@ -1,0 +1,1 @@
+export { useCurrentUser } from "@/src/features/auth/hooks/use-current-user";

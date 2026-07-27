@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#171717" />
+    <title>BigU — Offline</title>
+    <style>
+      :root { color-scheme: light dark; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+      body { min-height: 100vh; min-height: 100svh; margin: 0; display: grid; place-items: center; background: Canvas; color: CanvasText; }
+      main { width: min(32rem, calc(100% - 2rem)); text-align: center; }
+      .mark { display: grid; width: 3rem; height: 3rem; margin: 0 auto 1rem; place-items: center; border-radius: .75rem; background: CanvasText; color: Canvas; font-size: 1.5rem; font-weight: 700; }
+      h1 { margin: 0; font-size: 1.5rem; }
+      p { color: GrayText; line-height: 1.6; }
+      button { border: 1px solid GrayText; border-radius: .6rem; padding: .65rem 1rem; background: CanvasText; color: Canvas; font: inherit; font-weight: 600; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true">B</div>
+      <h1>BigU is offline</h1>
+      <p>An internet connection is required to load client data and chat. BigU does not store sensitive workspace data for offline access.</p>
+      <button type="button" onclick="window.location.reload()">Try again</button>
+    </main>
+  </body>
+</html>
