@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as argon2 from 'argon2';
-import { randomInt } from 'node:crypto';
 
 const COMMON_PASSWORDS = new Set([
   'password123!',
@@ -58,23 +57,4 @@ export class PasswordService {
     return argon2.verify(hash, password);
   }
 
-  generateTemporaryPassword() {
-    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    const numbers = '23456789';
-    const specials = '!@#$%^&*_-+=';
-    const all = `${letters}${numbers}${specials}`;
-    const chars = [
-      letters[randomInt(letters.length)],
-      numbers[randomInt(numbers.length)],
-      specials[randomInt(specials.length)],
-    ];
-    while (chars.length < 16) {
-      chars.push(all[randomInt(all.length)]);
-    }
-    for (let index = chars.length - 1; index > 0; index -= 1) {
-      const swap = randomInt(index + 1);
-      [chars[index], chars[swap]] = [chars[swap], chars[index]];
-    }
-    return chars.join('');
-  }
 }

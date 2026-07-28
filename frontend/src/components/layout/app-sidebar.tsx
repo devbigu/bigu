@@ -28,6 +28,7 @@ import { ClientProjectTree } from "./client-project-tree";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/growth-plans", label: "Growth plans", icon: Activity },
   { href: "/month-end", label: "Month end", icon: CalendarCheck },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -119,5 +120,7 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+
 
 

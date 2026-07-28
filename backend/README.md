@@ -69,7 +69,7 @@ Health: `GET /api/health`
 - `GET /api/auth/me`
 - `POST /api/auth/logout`
 
-Login accepts one `identifier` field containing either username or email plus the password. Auth uses HttpOnly cookies named `bigu_access_token` and `bigu_refresh_token`. Cookies are `SameSite=lax`, use `secure` in production, and refresh tokens are rotated and stored only as Argon2 hashes.
+Login accepts one `identifier` field containing either username or email plus the password. Auth uses HttpOnly cookies named `bigu_access_token` and `bigu_refresh_token`. Local development cookies use `SameSite=lax`. Production cookies use `SameSite=None; Secure` so the browser will send them when the frontend and API are deployed on different HTTPS domains. Refresh tokens are rotated and stored only as Argon2 hashes.
 
 ## Verify
 

@@ -1,12 +1,11 @@
 import {
-  IsBoolean,
   IsEmail,
+  IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
   MaxLength,
   MinLength,
-  ValidateIf,
 } from 'class-validator';
 import { Role, UserStatus } from '../../../generated/prisma/client';
 
@@ -20,15 +19,10 @@ export class CreateManagedUserDto {
   @MaxLength(255)
   email!: string;
 
-  @ValidateIf((value: CreateManagedUserDto) => !value.generatePassword)
   @IsString()
   @MinLength(12)
   @MaxLength(128)
-  initialPassword?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  generatePassword?: boolean;
+  initialPassword!: string;
 
   @IsEnum(Role)
   role: Role = Role.STAFF;

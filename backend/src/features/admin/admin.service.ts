@@ -144,10 +144,7 @@ export class AdminService {
     if (duplicate) {
       throw new ConflictException('A user with this email already exists.');
     }
-    const generatedPassword = dto.generatePassword
-      ? this.passwords.generateTemporaryPassword()
-      : undefined;
-    const initialPassword = generatedPassword ?? dto.initialPassword;
+    const initialPassword = dto.initialPassword;
     if (!initialPassword) {
       throw new BadRequestException('An initial password is required.');
     }
@@ -192,12 +189,7 @@ export class AdminService {
       return created;
     });
 
-    return {
-      user: this.toManagedUser(user),
-      ...(generatedPassword
-        ? { generatedTemporaryPassword: generatedPassword }
-        : {}),
-    };
+    return { user: this.toManagedUser(user) };
   }
 
   async updateUser(
@@ -276,10 +268,7 @@ export class AdminService {
     dto: ResetManagedUserPasswordDto,
   ) {
     const user = await this.requireUser(userId);
-    const generatedPassword = dto.generatePassword
-      ? this.passwords.generateTemporaryPassword()
-      : undefined;
-    const temporaryPassword = generatedPassword ?? dto.temporaryPassword;
+    const temporaryPassword = dto.temporaryPassword;
     if (!temporaryPassword) {
       throw new BadRequestException('A temporary password is required.');
     }
@@ -306,12 +295,7 @@ export class AdminService {
       });
       return result;
     });
-    return {
-      user: this.toManagedUser(updated),
-      ...(generatedPassword
-        ? { generatedTemporaryPassword: generatedPassword }
-        : {}),
-    };
+    return { user: this.toManagedUser(updated) };
   }
 
   async revokeSessions(actor: AuthenticatedUser, userId: string) {
@@ -449,10 +433,7 @@ export class AdminService {
     if (current.status === UserStatus.ACTIVE) {
       throw new ConflictException('This employee is already active.');
     }
-    const generatedPassword = dto.generatePassword
-      ? this.passwords.generateTemporaryPassword()
-      : undefined;
-    const temporaryPassword = generatedPassword ?? dto.temporaryPassword;
+    const temporaryPassword = dto.temporaryPassword;
     if (!temporaryPassword) {
       throw new BadRequestException(
         'Reactivation requires a temporary password.',
@@ -494,12 +475,7 @@ export class AdminService {
       });
       return result;
     });
-    return {
-      user: this.toManagedUser(updated),
-      ...(generatedPassword
-        ? { generatedTemporaryPassword: generatedPassword }
-        : {}),
-    };
+    return { user: this.toManagedUser(updated) };
   }
 
   async reassignWork(

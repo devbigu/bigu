@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -370,6 +370,13 @@ export default function ProjectWorkspacePage() {
           >
             <Microscope />
             Research
+          </Button>          <Button
+            nativeButton={false}
+            size="sm"
+            variant="outline"
+            render={<Link href={`/growth-plans/${projectId}`} />}
+          >
+            Growth plan
           </Button>
           {nextStatus && (
             <Button
@@ -818,3 +825,6 @@ export default function ProjectWorkspacePage() {
     </main>
   );
 }
+
+
+

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import {
   SpreadsheetSyncOperation,
@@ -336,7 +337,6 @@ export class SpreadsheetsService {
     await this.assertProjectAccess(projectId, user);
     const project = await this.projectData(projectId);
     const layout = buildProjectLayout(project);
-    const ExcelJS = await import('exceljs');
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'BigU';
     workbook.created = new Date();

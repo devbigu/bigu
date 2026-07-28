@@ -1,4 +1,4 @@
-﻿import {
+import {
   Body,
   Controller,
   Get,
@@ -9,7 +9,7 @@
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import type { CookieOptions, Request, Response } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
@@ -91,11 +91,9 @@ export class AuthController {
     response: Response,
     tokens: { accessToken: string; refreshToken: string },
   ) {
-    const secure = this.configService.get<string>('NODE_ENV') === 'production';
-    const commonOptions = {
+    const commonOptions: CookieOptions = {
       httpOnly: true,
-      secure,
-      sameSite: 'lax' as const,
+      ...this.getCookieTransportOptions(),
       path: '/',
     };
 
@@ -110,16 +108,25 @@ export class AuthController {
   }
 
   private clearAuthCookies(response: Response) {
-    const secure = this.configService.get<string>('NODE_ENV') === 'production';
-    const commonOptions = {
+    const commonOptions: CookieOptions = {
       httpOnly: true,
-      secure,
-      sameSite: 'lax' as const,
+      ...this.getCookieTransportOptions(),
       path: '/',
     };
 
     response.clearCookie(ACCESS_COOKIE_NAME, commonOptions);
     response.clearCookie(REFRESH_COOKIE_NAME, commonOptions);
+  }
+
+  private getCookieTransportOptions(): Pick<
+    CookieOptions,
+    'secure' | 'sameSite'
+  > {
+    const secure = this.configService.get<string>('NODE_ENV') === 'production';
+    return {
+      secure,
+      sameSite: secure ? 'none' : 'lax',
+    };
   }
 
   private readCookie(request: Request, cookieName: string): string | undefined {

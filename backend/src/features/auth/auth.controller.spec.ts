@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/unbound-method */
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -22,6 +22,7 @@ function makeRequest(cookies: Record<string, string> = {}) {
 
 describe('AuthController', () => {
   let controller: AuthController;
+  let nodeEnv = 'test';
   const safeUser = {
     id: 'user-1',
     name: 'Aditya',
@@ -43,6 +44,7 @@ describe('AuthController', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    nodeEnv = 'test';
     const authResult = {
       user: safeUser,
       tokens: { accessToken: 'access-token', refreshToken: 'refresh-token' },
@@ -60,7 +62,7 @@ describe('AuthController', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn((key: string) =>
-              key === 'NODE_ENV' ? 'test' : undefined,
+              key === 'NODE_ENV' ? nodeEnv : undefined,
             ),
           },
         },
@@ -90,6 +92,24 @@ describe('AuthController', () => {
     );
   });
 
+  it('sets cross-site compatible secure cookies in production', async () => {
+    nodeEnv = 'production';
+    const response = makeResponse();
+    const dto = { identifier: 'aditya', password: 'Password123!' };
+
+    await controller.login(dto, response);
+
+    expect(response.cookie).toHaveBeenCalledWith(
+      ACCESS_COOKIE_NAME,
+      'access-token',
+      expect.objectContaining({ secure: true, sameSite: 'none' }),
+    );
+    expect(response.cookie).toHaveBeenCalledWith(
+      REFRESH_COOKIE_NAME,
+      'refresh-token',
+      expect.objectContaining({ secure: true, sameSite: 'none' }),
+    );
+  });
   it('refreshes from the refresh cookie', async () => {
     const response = makeResponse();
 

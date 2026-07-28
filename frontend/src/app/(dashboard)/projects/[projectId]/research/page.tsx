@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ExternalLink, FlaskConical, Lightbulb, Plus, RefreshCw, Save, X } from "lucide-react";
@@ -98,7 +98,7 @@ export default function ProjectResearchPage() {
         <h1 className="mt-1 text-3xl font-semibold">Marketing Research</h1>
         <div className="mt-2 flex flex-wrap gap-2"><Badge>{workspace.researchStatus}</Badge><Badge variant="outline">{workspace.client.name}</Badge>{workspace.readOnly && <Badge variant="secondary">Read-only</Badge>}</div>
       </div>
-      <Button nativeButton={false} variant="outline" render={<Link href={`/projects/${projectId}`} />}>Project workspace</Button>
+      <div className="flex flex-wrap gap-2"><Button nativeButton={false} variant="outline" render={<Link href={`/growth-plans/${projectId}`} />}>Growth plan</Button><Button nativeButton={false} variant="outline" render={<Link href={`/projects/${projectId}`} />}>Project workspace</Button></div>
     </header>
 
     <section className="grid gap-3 md:grid-cols-5">
